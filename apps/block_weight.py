@@ -100,12 +100,6 @@ def render():
     d_max = (x_int - x_ft) * terr_scale
     d_max_eff = max(0.1, 0.98 * d_max)
 
-    # θ: vinkel fra horisontal, 0–180. 90=vertikal. >90 = faller "bakover".
-    # Unngå nær-parallell med planet ved å kreve |θ-α| > margin når θ<90 (tan positiv),
-    # og også unngå θ nær 180 (tan ~0) / nær 90 (tan -> inf) med litt margin.
-    theta_lo, theta_hi = 5.0, 175.0
-    margin = 0.5
-
     with st.sidebar:
         st.divider()
         st.header("Baksprekk")
@@ -120,8 +114,8 @@ def render():
 
         theta = st.slider(
             "Baksprekk-helning θ (°) fra horisontal (90=vertikal, >90 faller bakover)",
-            float(theta_lo),
-            float(theta_hi),
+            5.0,
+            175.0,
             90.0,
             0.5,
         )
@@ -146,7 +140,6 @@ def render():
     P_back_foot = (x_foot, y_foot)
 
     # --- Gyldighetskontroller ---
-    # 1) Fotpunkt må ligge på plan-segmentet som kan være bunn av blokka: (0, x_int)
     eps = 1e-6
     if not (0.0 + eps < x_foot < x_int - eps):
         st.error(
@@ -155,23 +148,12 @@ def render():
         )
         return
 
-    # 2) Retningslogikk:
-    #    - θ < 90: sprekken faller mot front → forvent x_foot < x_top
-    #    - θ > 90: sprekken faller bakover → forvent x_foot > x_top
-    if theta < 90.0 - margin and not (x_foot < x_top - eps):
-        st.error("Ugyldig: θ<90 betyr fall mot front, men fotpunkt havnet ikke foran toppunktet. Prøv annen θ/d_back.")
-        return
-    if theta > 90.0 + margin and not (x_foot > x_top + eps):
-        st.error("Ugyldig: θ>90 betyr fall bakover, men fotpunkt havnet ikke bak toppunktet. Prøv annen θ/d_back.")
-        return
-
-    # 3) Terreng ved toppunkt må være over planet ved fotpunkt (ellers blir polygon rar)
     if y_top <= y_foot + 1e-6:
         st.error("Ugyldig: baksprekk-toppen ligger ikke over glideplanet. Juster β/d_back.")
         return
 
-    # Kontaktlengde langs planet fra tå til fotpunkt
-    s_contact = x_foot / max(np.cos(a), 1e-9)
+    # Lengde langs glideplanet (underliggende plan) fra tå til fotpunkt
+    s_contact = x_foot / max(np.cos(a), 1e-9)  # m
 
     # Blokkpolygon: toe -> front-top -> back-top -> back-foot
     poly = [(0.0, 0.0), P_front_top, P_back_top, P_back_foot]
@@ -187,9 +169,11 @@ def render():
     sigma_n_kPa = N / max(A_plane, 1e-12)
     sigma_n_MPa = sigma_n_kPa / 1000.0
 
-    # Requested datapoints
-    L_release = dist(P_back_top, P_back_foot)      # lengde langs baksprekk
-    dx_crest_to_back = x_top - x_ft                # horisontal avstand crest -> baksprekk-top
+    # Lengde langs baksprekken (avløsende sprekk)
+    L_backcrack = dist(P_back_top, P_back_foot)
+
+    # Horisontal avstand mellom skjæringstopp (front-top) og baksprekk-top
+    dx_crest_to_back = x_top - x_ft
 
     # Plot geometry
     fig = go.Figure()
@@ -227,11 +211,14 @@ def render():
         n3.metric("σn (MPa)", f"{sigma_n_MPa:.4f}")
 
         r1, r2, r3 = st.columns(3)
-        r1.metric("Lengde avløsende sprekk (m)", f"{L_release:.2f}")
-        r2.metric("Δx topp→baksprekk (m)", f"{dx_crest_to_back:.2f}")
-        r3.metric("θ baksprekk (°)", f"{theta:.1f}")
+        r1.metric("Lengde baksprekk (m)", f"{L_backcrack:.2f}")
+        r2.metric("Lengde underliggende plan (m)", f"{s_contact:.2f}")
+        r3.metric("Δx topp→baksprekk (m)", f"{dx_crest_to_back:.2f}")
 
-        st.caption("σn er fra egenvekt alene. Vanntrykk/anker/sidestøtte må legges til separat.")
+        st.caption(
+            "Obs: Lengde langs baksprekk (hypotenusen) kan få et minimum når θ>90°, "
+            "men lengden langs glideplanet under blokka (s_contact) øker når fotpunktet flytter seg bakover."
+        )
 
     with c2:
         st.plotly_chart(fig, use_container_width=True)
@@ -249,13 +236,13 @@ def render():
                 ["width_m", width],
                 ["rho_kg_m3", rho],
                 ["A_block_m2", A_block],
-                ["A_plane_m2", A_plane],
                 ["W_kN", W],
                 ["N_kN", N],
                 ["T_kN", T],
                 ["sigma_n_kPa", sigma_n_kPa],
                 ["sigma_n_MPa", sigma_n_MPa],
-                ["L_release_m", L_release],
+                ["L_backcrack_m", L_backcrack],
+                ["L_underlying_plane_m (s_contact)", s_contact],
                 ["dx_crest_to_back_m", dx_crest_to_back],
                 ["x_front_top_m", x_ft],
                 ["x_back_top_m", x_top],

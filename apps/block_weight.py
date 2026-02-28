@@ -162,6 +162,7 @@ def render():
     gamma_kN_m3 = rho * g / 1000.0
     W = gamma_kN_m3 * (A_block * width)
 
+    # Kontaktareal KUN på underliggende glideplan-segment (tå → fotpunkt)
     A_plane = s_contact * width
     N = W * np.cos(a)
     T = W * np.sin(a)
@@ -169,29 +170,81 @@ def render():
     sigma_n_kPa = N / max(A_plane, 1e-12)
     sigma_n_MPa = sigma_n_kPa / 1000.0
 
-    # Lengde langs baksprekken (avløsende sprekk)
-    L_backcrack = dist(P_back_top, P_back_foot)
-
-    # Horisontal avstand mellom skjæringstopp (front-top) og baksprekk-top
-    dx_crest_to_back = x_top - x_ft
+    # Lengder / datapunkt
+    L_backcrack = dist(P_back_top, P_back_foot)  # langs baksprekk
+    dx_crest_to_back = x_top - x_ft              # horisontal topp→baksprekk-top
 
     # Plot geometry
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=[0, x_int], y=[0, m_plane * x_int], mode="lines", name="Glideplan"))
-    fig.add_trace(go.Scatter(x=[x_ft, x_int], y=[y_ft, m_terr * x_int + b_terr], mode="lines", name="Terreng"))
-    fig.add_trace(go.Scatter(x=[0, x_ft], y=[0, y_ft], mode="lines", name="Frontflate"))
-    fig.add_trace(go.Scatter(x=[x_top, x_foot], y=[y_top, y_foot], mode="lines", name="Baksprekk"))
 
+    # Fullt glideplan (0 -> x_int)
+    fig.add_trace(go.Scatter(
+        x=[0, x_int],
+        y=[0, m_plane * x_int],
+        mode="lines",
+        name="Glideplan",
+    ))
+
+    # Kontaktsegment på glideplan (0 -> x_foot) markert tykkere
+    fig.add_trace(go.Scatter(
+        x=[0, x_foot],
+        y=[0, y_foot],
+        mode="lines",
+        name="Kontakt på glideplan (Barton–Bandis)",
+        line=dict(width=6),
+    ))
+
+    # Terreng (front-top -> intersection)
+    fig.add_trace(go.Scatter(
+        x=[x_ft, x_int],
+        y=[y_ft, m_terr * x_int + b_terr],
+        mode="lines",
+        name="Terreng",
+    ))
+
+    # Frontflate
+    fig.add_trace(go.Scatter(
+        x=[0, x_ft],
+        y=[0, y_ft],
+        mode="lines",
+        name="Frontflate",
+    ))
+
+    # Baksprekk
+    fig.add_trace(go.Scatter(
+        x=[x_top, x_foot],
+        y=[y_top, y_foot],
+        mode="lines",
+        name="Baksprekk",
+    ))
+
+    # Blokkpolygon
     xs = [p[0] for p in poly] + [poly[0][0]]
     ys = [p[1] for p in poly] + [poly[0][1]]
-    fig.add_trace(go.Scatter(x=xs, y=ys, mode="lines", name="Blokk", fill="toself"))
+    fig.add_trace(go.Scatter(
+        x=xs,
+        y=ys,
+        mode="lines",
+        name="Blokk",
+        fill="toself",
+    ))
+
+    # Markér fotpunktet (på glideplan)
+    fig.add_trace(go.Scatter(
+        x=[x_foot],
+        y=[y_foot],
+        mode="markers+text",
+        name="Fotpunkt",
+        text=["fotpunkt"],
+        textposition="top center",
+    ))
 
     fig.update_layout(
         height=520,
         margin=dict(l=10, r=10, t=40, b=10),
         xaxis_title="x (m)",
         yaxis_title="y (m)",
-        title="Geometri (2D snitt)",
+        title="Geometri (2D snitt) – kontaktsegmentet på glideplanet er markert tykt",
         yaxis=dict(scaleanchor="x", scaleratio=1),
     )
 
@@ -199,6 +252,14 @@ def render():
 
     with c1:
         st.subheader("Resultater")
+
+        st.info(
+            "Normalspenningen σn beregnes som **middelverdi på kontaktflaten** mellom blokk og glideplan, "
+            "og kontaktflaten er **kun** glideplan-segmentet fra **tå (0,0)** til **fotpunktet** der baksprekken treffer glideplanet.\n\n"
+            f"Kontaktlengde langs plan: s_contact = {s_contact:.2f} m  →  Kontaktareal A_plane = s_contact·bredde = {A_plane:.2f} m².\n\n"
+            "Dette er segmentet du kan bruke direkte som input til Barton–Bandis (σn eller σ'n når du senere trekker fra poretrykk)."
+        )
+
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("A_blokk (m²)", f"{A_block:.2f}")
         m2.metric("W (kN)", f"{W:.1f}")
@@ -206,19 +267,16 @@ def render():
         m4.metric("T = W·sinα (kN)", f"{T:.1f}")
 
         n1, n2, n3 = st.columns(3)
-        n1.metric("A_plan (m²)", f"{A_plane:.2f}")
-        n2.metric("σn (kPa)", f"{sigma_n_kPa:.1f}")
-        n3.metric("σn (MPa)", f"{sigma_n_MPa:.4f}")
+        n1.metric("Kontaktlengde s_contact (m)", f"{s_contact:.2f}")
+        n2.metric("A_plan (m²)", f"{A_plane:.2f}")
+        n3.metric("σn (kPa)", f"{sigma_n_kPa:.1f}")
 
         r1, r2, r3 = st.columns(3)
-        r1.metric("Lengde baksprekk (m)", f"{L_backcrack:.2f}")
-        r2.metric("Lengde underliggende plan (m)", f"{s_contact:.2f}")
+        r1.metric("σn (MPa)", f"{sigma_n_MPa:.4f}")
+        r2.metric("Lengde baksprekk (m)", f"{L_backcrack:.2f}")
         r3.metric("Δx topp→baksprekk (m)", f"{dx_crest_to_back:.2f}")
 
-        st.caption(
-            "Obs: Lengde langs baksprekk (hypotenusen) kan få et minimum når θ>90°, "
-            "men lengden langs glideplanet under blokka (s_contact) øker når fotpunktet flytter seg bakover."
-        )
+        st.caption("σn er fra egenvekt alene. Vanntrykk/anker/sidestøtte må legges til separat.")
 
     with c2:
         st.plotly_chart(fig, use_container_width=True)
@@ -239,10 +297,11 @@ def render():
                 ["W_kN", W],
                 ["N_kN", N],
                 ["T_kN", T],
+                ["s_contact_m (underliggende plan)", s_contact],
+                ["A_plane_m2 (kontakt på plan)", A_plane],
                 ["sigma_n_kPa", sigma_n_kPa],
                 ["sigma_n_MPa", sigma_n_MPa],
                 ["L_backcrack_m", L_backcrack],
-                ["L_underlying_plane_m (s_contact)", s_contact],
                 ["dx_crest_to_back_m", dx_crest_to_back],
                 ["x_front_top_m", x_ft],
                 ["x_back_top_m", x_top],

@@ -13,8 +13,46 @@ PRESETS = {
     "Glimmerskifer (typisk)": {"JRC0": 10.0, "JCS0": 60.0, "phi_b": 29.0, "L": 5.0, "L0": 0.10},
 }
 
+
+def slider_with_input(label, key, min_val, max_val, default, step):
+    """
+    Synkronisert slider + tallfelt i sidebar (samme linje).
+    Bruk unike keys (her: bb_*) for å unngå kollisjon i hub.
+    """
+    if key not in st.session_state:
+        st.session_state[key] = float(default)
+
+    st.session_state[key] = float(np.clip(st.session_state[key], min_val, max_val))
+
+    col1, col2 = st.columns([3, 1])
+
+    with col1:
+        st.session_state[key] = st.slider(
+            label,
+            min_value=min_val,
+            max_value=max_val,
+            value=float(st.session_state[key]),
+            step=step,
+            key=f"{key}_slider",
+        )
+
+    with col2:
+        st.session_state[key] = st.number_input(
+            " ",
+            min_value=min_val,
+            max_value=max_val,
+            value=float(st.session_state[key]),
+            step=step,
+            key=f"{key}_input",
+            label_visibility="collapsed",
+        )
+
+    return float(st.session_state[key])
+
+
 def _interp(x, y, x0):
     return float(np.interp(float(x0), x, y))
+
 
 def _curves(JRC0, JCS0, phi_b, L, L0, sigma_max, npts, use_scaling=True):
     sigma = np.linspace(1e-3, float(sigma_max), int(npts))
@@ -37,6 +75,7 @@ def _curves(JRC0, JCS0, phi_b, L, L0, sigma_max, npts, use_scaling=True):
 
     return sigma, (tau_u, phi_u), (tau_s, phi_s), (JRCs, JCSs)
 
+
 def render():
     st.header("Barton–Bandis: τ(σn) og φ_active(σn)")
 
@@ -54,19 +93,19 @@ def render():
             st.session_state["bb_L0"] = p["L0"]
 
         st.subheader("Input")
-        JRC0 = st.slider("JRC0", 0.0, 20.0, float(st.session_state.get("bb_JRC0", 12.0)), 0.1, key="bb_JRC0")
-        JCS0 = st.slider("JCS0 (MPa)", 20.0, 200.0, float(st.session_state.get("bb_JCS0", 80.0)), 1.0, key="bb_JCS0")
-        phi_b = st.slider("φb (deg)", 25.0, 40.0, float(st.session_state.get("bb_phi_b", 30.0)), 0.1, key="bb_phi_b")
+        JRC0 = slider_with_input("JRC0", "bb_JRC0", 0.0, 20.0, float(st.session_state.get("bb_JRC0", 12.0)), 0.1)
+        JCS0 = slider_with_input("JCS0 (MPa)", "bb_JCS0", 20.0, 200.0, float(st.session_state.get("bb_JCS0", 80.0)), 1.0)
+        phi_b = slider_with_input("φb (deg)", "bb_phi_b", 25.0, 40.0, float(st.session_state.get("bb_phi_b", 30.0)), 0.1)
 
         st.subheader("Skalering")
-        L = st.slider("L (m)", 1.0, 20.0, float(st.session_state.get("bb_L", 5.0)), 0.5, key="bb_L")
+        L = slider_with_input("L (m)", "bb_L", 1.0, 20.0, float(st.session_state.get("bb_L", 5.0)), 0.5)
         L0 = st.number_input("L0 (m)", 0.01, 1.0, float(st.session_state.get("bb_L0", 0.10)), 0.01, key="bb_L0")
         use_scaling = st.checkbox("Bruk skalering", value=True, key="bb_use_scaling")
         show_both = st.checkbox("Vis både uskalert og skalert", value=True, key="bb_show_both")
 
         st.subheader("σn")
-        sigma_max = st.slider("σn maks (MPa)", 0.1, 5.0, 5.0, 0.1, key="bb_sigma_max")
-        npts = st.slider("Punkter", 50, 500, 200, 10, key="bb_npts")
+        sigma_max = slider_with_input("σn maks (MPa)", "bb_sigma_max", 0.1, 5.0, float(st.session_state.get("bb_sigma_max", 5.0)), 0.1)
+        npts = st.slider("Punkter", 50, 500, int(st.session_state.get("bb_npts", 200)), 10, key="bb_npts")
 
     sigma, (tau_u, phi_u), (tau_s, phi_s), (JRCs, JCSs) = _curves(
         JRC0, JCS0, phi_b, L, L0, sigma_max, npts, use_scaling=use_scaling
@@ -121,14 +160,16 @@ def render():
         left, right = st.columns(2)
         with left:
             out_choice = st.selectbox("Output", ["τ ved valgt σn", "φ_active ved valgt σn"], key="sens_out")
-            sigma_target = st.slider(
+
+            sigma_target = slider_with_input(
                 "σn (MPa)",
+                "sens_sigma",
                 0.05,
                 float(sigma_max),
                 min(1.0, float(sigma_max)),
                 0.05,
-                key="sens_sigma",
             )
+
             curve = st.radio("Kurve", ["Skalert", "Uskalert"], horizontal=True, key="sens_curve")
             step_pct = st.slider("± endring (%)", 1, 50, 10, 1, key="sens_step")
 
@@ -208,13 +249,14 @@ def render():
         with c1:
             mc_n = st.slider("N", 200, 20000, 2000, 200, key="mc_n")
         with c2:
-            mc_sigma = st.slider(
+            # Kan ikke være større enn sigma_max
+            mc_sigma = slider_with_input(
                 "σn (MPa)",
+                "mc_sigma",
                 0.05,
                 float(sigma_max),
                 min(1.0, float(sigma_max)),
                 0.05,
-                key="mc_sigma",
             )
         with c3:
             mc_out = st.selectbox("Output", ["τ", "φ_active"], key="mc_out")

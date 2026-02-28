@@ -4,6 +4,44 @@ import streamlit as st
 import plotly.graph_objects as go
 
 
+def slider_with_input(label, key, min_val, max_val, default, step):
+    """
+    Slider + tallfelt (synkronisert).
+    Tallfeltet vises til høyre for slideren (samme linje) for å få en kompakt sidebar.
+    """
+    # Init shared value
+    if key not in st.session_state:
+        st.session_state[key] = default
+
+    # Ensure value stays within bounds
+    st.session_state[key] = float(np.clip(st.session_state[key], min_val, max_val))
+
+    col1, col2 = st.columns([3, 1])
+
+    with col1:
+        st.session_state[key] = st.slider(
+            label,
+            min_value=min_val,
+            max_value=max_val,
+            value=st.session_state[key],
+            step=step,
+            key=f"{key}_slider",
+        )
+
+    with col2:
+        st.session_state[key] = st.number_input(
+            " ",
+            min_value=min_val,
+            max_value=max_val,
+            value=st.session_state[key],
+            step=step,
+            key=f"{key}_input",
+            label_visibility="collapsed",
+        )
+
+    return float(st.session_state[key])
+
+
 def render():
     st.title("Blokkvekt → normalspenning på glideplan (2D snitt)")
 
@@ -51,20 +89,20 @@ def render():
 
     with st.sidebar:
         st.header("Geometri")
-        alpha = st.slider("Glideplan helning α (°)", 5.0, 85.0, 35.0, 0.5)
-        beta = st.slider("Terreng helning β (°)", -20.0, 85.0, 10.0, 0.5)
-        gamma = st.slider("Frontflate helning γ (°)", 5.0, 90.0, 75.0, 0.5)
+        alpha = slider_with_input("Glideplan helning α (°)", "alpha", 5.0, 85.0, 35.0, 0.5)
+        beta = slider_with_input("Terreng helning β (°)", "beta", -20.0, 85.0, 10.0, 0.5)
+        gamma = slider_with_input("Frontflate helning γ (°)", "gamma", 5.0, 90.0, 75.0, 0.5)
 
         st.divider()
         st.header("Størrelse")
-        Hf = st.slider("Front-høyde Hf (m)", 0.5, 60.0, 8.0, 0.5)
-        width = st.number_input("Bredde (m) (snitt=1 m)", 0.1, 50.0, 1.0, 0.1)
+        Hf = slider_with_input("Front-høyde Hf (m)", "Hf", 0.5, 60.0, 8.0, 0.5)
+        width = st.number_input("Bredde (m) (snitt=1 m)", min_value=0.1, max_value=50.0, value=1.0, step=0.1)
 
         st.divider()
         st.header("Tetthet")
         rock_choice = st.selectbox("Bergart (ρ)", ["(egen verdi)"] + list(ROCK_DENSITIES.keys()), index=1)
         if rock_choice == "(egen verdi)":
-            rho = st.number_input("ρ (kg/m³)", 1500, 3500, 2700, 50)
+            rho = st.number_input("ρ (kg/m³)", min_value=1500, max_value=3500, value=2700, step=50)
         else:
             rho = ROCK_DENSITIES[rock_choice]
             st.caption(f"ρ = {rho} kg/m³")
@@ -103,17 +141,20 @@ def render():
     with st.sidebar:
         st.divider()
         st.header("Baksprekk")
-        d_back = st.slider(
+        d_back_default = float(min(4.0, d_max_eff))
+        d_back = slider_with_input(
             "Avstand til baksprekk fra toppen av frontflaten (m) langs terreng",
+            "d_back",
             0.0,
             float(d_max_eff),
-            float(min(4.0, d_max_eff)),
+            d_back_default,
             0.1,
         )
         st.caption(f"Maks (beregnet) ≈ {d_max:.2f} m (slider-tak = 98%)")
 
-        theta = st.slider(
+        theta = slider_with_input(
             "Baksprekk-helning θ (°) fra horisontal (90=vertikal, >90 faller bakover)",
+            "theta",
             5.0,
             175.0,
             90.0,

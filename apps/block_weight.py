@@ -120,6 +120,12 @@ def render():
         st.error("Baksprekk treffer ikke terreng over planet (degenerert blokk). Reduser d_back eller juster β/γ/Hf.")
         return
 
+    # Lengde av avløsende sprekk (baksprekk) (m)
+    L_release = y_top_back - y_back  # vertikal lengde
+
+    # Horisontal avstand mellom skjæringstopp (front-top) og baksprekk (m)
+    dx_crest_to_back = x_back - x_ft
+
     # Lengde av kontakt langs planet fra tå (0,0) til x_back
     s_back = x_back / max(np.cos(a), 1e-9)
 
@@ -172,6 +178,10 @@ def render():
         n2.metric("σn (kPa)", f"{sigma_n_kPa:.1f}")
         n3.metric("σn (MPa)", f"{sigma_n_MPa:.4f}")
 
+        r1, r2 = st.columns(2)
+        r1.metric("Lengde avløsende sprekk (m)", f"{L_release:.2f}")
+        r2.metric("Horisontal avstand topp→baksprekk (m)", f"{dx_crest_to_back:.2f}")
+
         st.caption("σn er fra egenvekt alene. Vanntrykk/anker/sidestøtte må legges til separat.")
 
     with c2:
@@ -196,6 +206,8 @@ def render():
             ["T_kN", T],
             ["sigma_n_kPa", sigma_n_kPa],
             ["sigma_n_MPa", sigma_n_MPa],
+            ["L_release_m (baksprekk)", L_release],
+            ["dx_crest_to_back_m", dx_crest_to_back],
             ["x_int_m (terreng∩plan)", x_int],
         ], columns=["Parameter", "Value"])
         st.dataframe(df, use_container_width=True)

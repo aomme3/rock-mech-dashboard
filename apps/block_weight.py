@@ -46,6 +46,9 @@ def render():
         y2 = np.r_[y, y[0]]
         return 0.5 * abs(np.sum(x2[:-1] * y2[1:] - x2[1:] * y2[:-1]))
 
+    def dist(p, q):
+        return float(np.hypot(q[0] - p[0], q[1] - p[1]))
+
     with st.sidebar:
         st.header("Geometri")
         alpha = st.slider("Glideplan helning α (°)", 5.0, 85.0, 35.0, 0.5)
@@ -76,9 +79,10 @@ def render():
         m_front = np.tan(np.radians(gamma))
         x_ft = Hf / max(m_front, 1e-12)
     y_ft = Hf
+    P_front_top = (x_ft, y_ft)
 
     # Terrenglinje gjennom front-top med helning beta
-    m_terr, b_terr = line_from_point_angle((x_ft, y_ft), beta)
+    m_terr, b_terr = line_from_point_angle(P_front_top, beta)
 
     # Terreng ∩ plan: gir maksimal utstrekning før blokka "lukker seg"
     ip = intersect_lines(m_terr, b_terr, m_plane, b_plane)
@@ -96,6 +100,13 @@ def render():
     d_max = (x_int - x_ft) * terr_scale
     d_max_eff = max(0.1, 0.98 * d_max)
 
+    # Gyldig theta-range: må være brattere enn glideplanet for å krysse det "ned mot front"
+    theta_min = min(max(alpha + 0.5, 5.0), 89.0)
+    theta_max = 89.5
+    if theta_min >= theta_max:
+        st.error("α er så bratt at gyldig baksprekk-helning ikke finnes (θ må være > α). Reduser α.")
+        return
+
     with st.sidebar:
         st.divider()
         st.header("Baksprekk")
@@ -108,48 +119,94 @@ def render():
         )
         st.caption(f"Maks (beregnet) ≈ {d_max:.2f} m (slider-tak = 98%)")
 
-    # Konverter d_back -> x_back (baksprekk er vertikal ved x=x_back)
-    x_back = x_ft + d_back / max(terr_scale, 1e-12)
+        theta = st.slider(
+            "Baksprekk-helning θ (°) fra horisontal (dipper mot front)",
+            float(theta_min),
+            float(theta_max),
+            float(max(75.0, theta_min)),
+            0.5,
+        )
+        st.caption("θ=90° gir vertikal baksprekk. Gyldig krav: θ > α.")
 
-    # Fotpunkt på planet
-    y_back = m_plane * x_back
+    # Back-top point on terrain at distance d_back from front-top ALONG the terrain line
+    # d_back = (x_top - x_ft) * sqrt(1+m_terr^2)  =>  x_top = x_ft + d_back/terr_scale
+    x_top = x_ft + d_back / max(terr_scale, 1e-12)
+    y_top = m_terr * x_top + b_terr
+    P_back_top = (x_top, y_top)
 
-    # Toppunkt på terreng
-    y_top_back = m_terr * x_back + b_terr
-    if y_top_back <= y_back + 1e-6:
-        st.error("Baksprekk treffer ikke terreng over planet (degenerert blokk). Reduser d_back eller juster β/γ/Hf.")
+    # Back crack line: through P_back_top with slope m_crack = tan(theta) (positive),
+    # so that moving left (toward smaller x) goes downward (toward smaller y).
+    m_crack = np.tan(np.radians(theta))
+    b_crack = y_top - m_crack * x_top
+
+    # Foot point = intersection(back crack, plane)
+    # plane: y = m_plane x; crack: y = m_crack x + b_crack
+    # => (m_plane - m_crack)x = b_crack
+    denom = (m_plane - m_crack)
+    if abs(denom) < 1e-10:
+        st.error("Baksprekk er (nesten) parallell med glideplanet. Øk θ (eller endre α).")
         return
 
-    # Lengde av avløsende sprekk (baksprekk) (m)
-    L_release = y_top_back - y_back  # vertikal lengde
+    x_foot = b_crack / denom
+    y_foot = m_plane * x_foot
+    P_back_foot = (x_foot, y_foot)
 
-    # Horisontal avstand mellom skjæringstopp (front-top) og baksprekk (m)
-    dx_crest_to_back = x_back - x_ft
+    # Validity checks for geometry
+    # Expect foot to be between toe (0) and back-top (x_top) if it dips toward front
+    if not (0.0 < x_foot < x_top - 1e-6):
+        st.error(
+            "Ugyldig kombinasjon: baksprekklinjen treffer ikke glideplanet mellom tå og baksprekk-toppen.\n"
+            "Prøv større θ (brattere), mindre d_back, eller endre α/β."
+        )
+        return
 
-    # Lengde av kontakt langs planet fra tå (0,0) til x_back
-    s_back = x_back / max(np.cos(a), 1e-9)
+    # Also require that terrain is above the plane at relevant x (so polygon closes "over" the plane)
+    # (We mainly need y_top > y_foot, already implied by x_foot < x_top and slopes)
+    if y_top <= y_foot + 1e-6:
+        st.error("Ugyldig: terreng ved baksprekk er ikke over glideplanet. Endre β eller d_back.")
+        return
 
-    # Blokkpolygon: toe -> front-top -> back-top -> back-foot
-    poly = [(0.0, 0.0), (x_ft, y_ft), (x_back, y_top_back), (x_back, y_back)]
+    # Contact length along plane from toe to foot:
+    s_contact = x_foot / max(np.cos(a), 1e-9)
 
-    A_block = polygon_area(poly)
-    gamma_kN_m3 = rho * g / 1000.0
-    W = gamma_kN_m3 * (A_block * width)
+    # Block polygon: toe -> front-top -> back-top -> back-foot (on plane)
+    poly = [(0.0, 0.0), P_front_top, P_back_top, P_back_foot]
 
-    A_plane = s_back * width
-    N = W * np.cos(a)
-    T = W * np.sin(a)
+    A_block = polygon_area(poly)                  # m²
+    gamma_kN_m3 = rho * g / 1000.0               # kN/m³
+    W = gamma_kN_m3 * (A_block * width)          # kN (per m "inn i arket" hvis width=1)
 
-    sigma_n_kPa = N / max(A_plane, 1e-12)
+    A_plane = s_contact * width                  # m²
+    N = W * np.cos(a)                            # kN
+    T = W * np.sin(a)                            # kN
+
+    sigma_n_kPa = N / max(A_plane, 1e-12)        # kPa
     sigma_n_MPa = sigma_n_kPa / 1000.0
 
-    # Plot geometri
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(x=[0, x_int], y=[0, m_plane * x_int], mode="lines", name="Glideplan"))
-    fig.add_trace(go.Scatter(x=[0, x_int], y=[m_terr * 0 + b_terr, m_terr * x_int + b_terr], mode="lines", name="Terreng"))
-    fig.add_trace(go.Scatter(x=[0, x_ft], y=[0, y_ft], mode="lines", name="Frontflate"))
-    fig.add_trace(go.Scatter(x=[x_back, x_back], y=[y_back, y_top_back], mode="lines", name="Baksprekk"))
+    # New requested datapoints:
+    # 1) Length of releasing crack (baksprekk) along its line
+    L_release = dist(P_back_top, P_back_foot)
 
+    # 2) Horizontal distance between crest (front-top) and back crack top
+    dx_crest_to_back = x_top - x_ft
+
+    # Plot geometry
+    fig = go.Figure()
+
+    # plane segment (0 -> x_int)
+    fig.add_trace(go.Scatter(x=[0, x_int], y=[0, m_plane * x_int], mode="lines", name="Glideplan"))
+    # terrain segment (front-top -> intersection)
+    fig.add_trace(go.Scatter(x=[x_ft, x_int], y=[y_ft, m_terr * x_int + b_terr], mode="lines", name="Terreng"))
+    # also show terrain back to x=0 for context
+    fig.add_trace(go.Scatter(x=[0, x_ft], y=[m_terr * 0 + b_terr, y_ft], mode="lines", name="Terreng (forlengelse)", line=dict(dash="dot")))
+
+    # front face
+    fig.add_trace(go.Scatter(x=[0, x_ft], y=[0, y_ft], mode="lines", name="Frontflate"))
+
+    # back crack (slanted)
+    fig.add_trace(go.Scatter(x=[x_top, x_foot], y=[y_top, y_foot], mode="lines", name="Baksprekk"))
+
+    # polygon
     xs = [p[0] for p in poly] + [poly[0][0]]
     ys = [p[1] for p in poly] + [poly[0][1]]
     fig.add_trace(go.Scatter(x=xs, y=ys, mode="lines", name="Blokk", fill="toself"))
@@ -178,9 +235,10 @@ def render():
         n2.metric("σn (kPa)", f"{sigma_n_kPa:.1f}")
         n3.metric("σn (MPa)", f"{sigma_n_MPa:.4f}")
 
-        r1, r2 = st.columns(2)
+        r1, r2, r3 = st.columns(3)
         r1.metric("Lengde avløsende sprekk (m)", f"{L_release:.2f}")
-        r2.metric("Horisontal avstand topp→baksprekk (m)", f"{dx_crest_to_back:.2f}")
+        r2.metric("Δx topp→baksprekk (m)", f"{dx_crest_to_back:.2f}")
+        r3.metric("θ baksprekk (°)", f"{theta:.1f}")
 
         st.caption("σn er fra egenvekt alene. Vanntrykk/anker/sidestøtte må legges til separat.")
 
@@ -192,11 +250,10 @@ def render():
             ["alpha_deg", alpha],
             ["beta_deg", beta],
             ["gamma_deg", gamma],
+            ["theta_backcrack_deg", theta],
             ["Hf_m", Hf],
             ["d_back_m (langs terreng)", d_back],
             ["d_max_m (beregnet)", d_max],
-            ["x_back_m", x_back],
-            ["s_back_m (langs plan fra tå)", s_back],
             ["width_m", width],
             ["rho_kg_m3", rho],
             ["A_block_m2", A_block],
@@ -206,8 +263,11 @@ def render():
             ["T_kN", T],
             ["sigma_n_kPa", sigma_n_kPa],
             ["sigma_n_MPa", sigma_n_MPa],
-            ["L_release_m (baksprekk)", L_release],
+            ["L_release_m", L_release],
             ["dx_crest_to_back_m", dx_crest_to_back],
+            ["x_front_top_m", x_ft],
+            ["x_back_top_m", x_top],
+            ["x_back_foot_m", x_foot],
             ["x_int_m (terreng∩plan)", x_int],
         ], columns=["Parameter", "Value"])
         st.dataframe(df, use_container_width=True)

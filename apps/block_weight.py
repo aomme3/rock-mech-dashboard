@@ -1,3 +1,4 @@
+# apps/block_weight.py
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -9,11 +10,9 @@ def slider_with_input(label, key, min_val, max_val, default, step):
     Slider + tallfelt (synkronisert).
     Tallfeltet vises til høyre for slideren (samme linje) for å få en kompakt sidebar.
     """
-    # Init shared value
     if key not in st.session_state:
         st.session_state[key] = default
 
-    # Ensure value stays within bounds
     st.session_state[key] = float(np.clip(st.session_state[key], min_val, max_val))
 
     col1, col2 = st.columns([3, 1])
@@ -89,13 +88,13 @@ def render():
 
     with st.sidebar:
         st.header("Geometri")
-        alpha = slider_with_input("Glideplan helning α (°)", "alpha", 5.0, 85.0, 35.0, 0.5)
-        beta = slider_with_input("Terreng helning β (°)", "beta", -20.0, 85.0, 10.0, 0.5)
-        gamma = slider_with_input("Frontflate helning γ (°)", "gamma", 5.0, 90.0, 75.0, 0.5)
+        alpha = slider_with_input("Glideplan helning α (°)", "bw_alpha", 5.0, 85.0, 35.0, 0.5)
+        beta = slider_with_input("Terreng helning β (°)", "bw_beta", -20.0, 85.0, 10.0, 0.5)
+        gamma = slider_with_input("Frontflate helning γ (°)", "bw_gamma", 5.0, 90.0, 75.0, 0.5)
 
         st.divider()
         st.header("Størrelse")
-        Hf = slider_with_input("Front-høyde Hf (m)", "Hf", 0.5, 60.0, 8.0, 0.5)
+        Hf = slider_with_input("Front-høyde Hf (m)", "bw_Hf", 0.5, 60.0, 8.0, 0.5)
         width = st.number_input("Bredde (m) (snitt=1 m)", min_value=0.1, max_value=50.0, value=1.0, step=0.1)
 
         st.divider()
@@ -144,7 +143,7 @@ def render():
         d_back_default = float(min(4.0, d_max_eff))
         d_back = slider_with_input(
             "Avstand til baksprekk fra toppen av frontflaten (m) langs terreng",
-            "d_back",
+            "bw_d_back",
             0.0,
             float(d_max_eff),
             d_back_default,
@@ -154,7 +153,7 @@ def render():
 
         theta = slider_with_input(
             "Baksprekk-helning θ (°) fra horisontal (90=vertikal, >90 faller bakover)",
-            "theta",
+            "bw_theta",
             5.0,
             175.0,
             90.0,
@@ -214,6 +213,13 @@ def render():
     # Lengder / datapunkt
     L_backcrack = dist(P_back_top, P_back_foot)  # langs baksprekk
     dx_crest_to_back = x_top - x_ft              # horisontal topp→baksprekk-top
+
+    # --- DELING MED ANDRE APPER (Barton–Bandis) ---
+    st.session_state["bw_sigma_n_MPa"] = float(sigma_n_MPa)
+    st.session_state["bw_sigma_n_kPa"] = float(sigma_n_kPa)
+    st.session_state["bw_A_plane_m2"] = float(A_plane)
+    st.session_state["bw_s_contact_m"] = float(s_contact)
+    st.session_state["bw_last_updated"] = True
 
     # Plot geometry
     fig = go.Figure()

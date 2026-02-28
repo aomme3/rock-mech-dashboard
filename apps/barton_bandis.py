@@ -1,3 +1,4 @@
+# apps/barton_bandis.py
 import numpy as np
 import pandas as pd
 import streamlit as st
@@ -15,10 +16,7 @@ PRESETS = {
 
 
 def slider_with_input(label, key, min_val, max_val, default, step):
-    """
-    Synkronisert slider + tallfelt i sidebar (samme linje).
-    Bruk unike keys (her: bb_*) for å unngå kollisjon i hub.
-    """
+    """Synkronisert slider + tallfelt i sidebar (samme linje)."""
     if key not in st.session_state:
         st.session_state[key] = float(default)
 
@@ -76,6 +74,22 @@ def _curves(JRC0, JCS0, phi_b, L, L0, sigma_max, npts, use_scaling=True):
     return sigma, (tau_u, phi_u), (tau_s, phi_s), (JRCs, JCSs)
 
 
+def _add_sigma_marker(fig: go.Figure, sigma_x: float, y: float, label: str):
+    # Punkt + vertikal stiplet linje + liten tekst
+    fig.add_trace(
+        go.Scatter(
+            x=[sigma_x],
+            y=[y],
+            mode="markers+text",
+            name=label,
+            text=[label],
+            textposition="top center",
+            showlegend=True,
+        )
+    )
+    fig.add_vline(x=sigma_x, line_width=1, line_dash="dot")
+
+
 def render():
     st.header("Barton–Bandis: τ(σn) og φ_active(σn)")
 
@@ -107,6 +121,22 @@ def render():
         sigma_max = slider_with_input("σn maks (MPa)", "bb_sigma_max", 0.1, 5.0, float(st.session_state.get("bb_sigma_max", 5.0)), 0.1)
         npts = st.slider("Punkter", 50, 500, int(st.session_state.get("bb_npts", 200)), 10, key="bb_npts")
 
+        st.divider()
+        st.subheader("Hent σn fra Blokkvekt")
+
+        if st.button("Hent σn fra Blokkvekt", key="bb_fetch_bw_sigma"):
+            if "bw_sigma_n_MPa" in st.session_state:
+                st.session_state["bb_sigma_marker"] = float(st.session_state["bw_sigma_n_MPa"])
+                # Valgfritt: synk til sensitivity/MC også (klippes til sigma_max)
+                st.session_state["sens_sigma"] = min(float(st.session_state["bb_sigma_marker"]), float(sigma_max))
+                st.session_state["mc_sigma"] = min(float(st.session_state["bb_sigma_marker"]), float(sigma_max))
+            else:
+                st.warning("Fant ingen σn fra Blokkvekt ennå. Kjør Blokkvekt-appen først.")
+
+        mk = st.session_state.get("bb_sigma_marker", None)
+        if mk is not None:
+            st.caption(f"Markør: σn = {float(mk):.4f} MPa (fra Blokkvekt)")
+
     sigma, (tau_u, phi_u), (tau_s, phi_s), (JRCs, JCSs) = _curves(
         JRC0, JCS0, phi_b, L, L0, sigma_max, npts, use_scaling=use_scaling
     )
@@ -134,7 +164,6 @@ def render():
             height=420,
             margin=dict(l=10, r=10, t=40, b=10),
         )
-        c1.plotly_chart(fig1, use_container_width=True)
 
         fig2 = go.Figure()
         if show_both:
@@ -147,6 +176,19 @@ def render():
             height=420,
             margin=dict(l=10, r=10, t=40, b=10),
         )
+
+        # --- Markør fra Blokkvekt (hvis satt) ---
+        sigma_mark = st.session_state.get("bb_sigma_marker", None)
+        if sigma_mark is not None:
+            sigma_mark = float(sigma_mark)
+            if 0.0 < sigma_mark <= float(sigma_max):
+                # Marker følger skalert-kurven (også når show_both=True)
+                tau_mark = _interp(sigma, tau_s, sigma_mark)
+                phi_mark = _interp(sigma, phi_s, sigma_mark)
+                _add_sigma_marker(fig1, sigma_mark, tau_mark, "σn fra Blokkvekt")
+                _add_sigma_marker(fig2, sigma_mark, phi_mark, "σn fra Blokkvekt")
+
+        c1.plotly_chart(fig1, use_container_width=True)
         c2.plotly_chart(fig2, use_container_width=True)
 
         st.caption("σn starter ved 0.001 MPa for å unngå log10(0).")
@@ -249,7 +291,6 @@ def render():
         with c1:
             mc_n = st.slider("N", 200, 20000, 2000, 200, key="mc_n")
         with c2:
-            # Kan ikke være større enn sigma_max
             mc_sigma = slider_with_input(
                 "σn (MPa)",
                 "mc_sigma",

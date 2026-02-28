@@ -101,7 +101,7 @@ def render():
             sigma_target = st.slider("σn (MPa)", 0.05, float(sigma_max), min(1.0, float(sigma_max)), 0.05)
             curve = st.radio("Kurve", ["Skalert", "Uskalert"], horizontal=True)
             step_pct = st.slider("± endring (%)", 1, 50, 10, 1)
-            vary = st.multiselect("Varier parametre", ["JRC0","JCS0","φb","L","L0"], default=["JRC0","JCS0","φb","L"])
+            vary = st.multiselect("Varier parametre", ["JRC0","JCS0","phi_b","L","L0"], default=["JRC0","JCS0","phi_b","L"])
 
         series = (tau_s if out_choice.startswith("τ") else phi_s) if curve=="Skalert" else (tau_u if out_choice.startswith("τ") else phi_u)
         y_base = _interp(sigma, series, sigma_target)

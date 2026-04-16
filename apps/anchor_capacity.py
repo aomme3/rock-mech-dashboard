@@ -391,6 +391,87 @@ def _tab_tables():
 
 
 # ---------------------------------------------------------------------------
+# Parameterforklaring
+# ---------------------------------------------------------------------------
+
+_PARAM_GLOSSARY = [
+    ("Laster og geometri", [
+        ("F_k",      "kN",      "Karakteristisk resultantkraft i forankringen (ufalktorert)."),
+        ("F_Ed",     "kN",      "Dimensjonerende resultantkraft = γ_F · F_k."),
+        ("β",        "grader",  "Vinkel mellom kraftretningen og stagaksen i vertikalplanet. β = 0° gir rent strekk, β = 90° gir rent skjær."),
+        ("N_k / N_Ed", "kN",   "Karakteristisk / dimensjonerende aksialkraft langs stagaksen: N = F · cos β."),
+        ("V_k / V_Ed", "kN",   "Karakteristisk / dimensjonerende skjærkraft vinkelrett på stagaksen: V = F · sin β."),
+        ("l_b",      "mm",      "Innfestingslengde — lengden av staget som er omstøpt/injisert i berg."),
+        ("d",        "mm",      "Nominell ytre diameter på bolt eller stag."),
+        ("d_bh",     "mm",      "Borehullsdiameter."),
+    ]),
+    ("Partialfaktorer", [
+        ("γ_s",      "–",       "Materialfaktor for stål. Standardverdi 1,35 etter NS-EN 1993."),
+        ("γ_τ",      "–",       "Materialfaktor for heftfasthet mellom injeksjonsmasse og berg. Standardverdi 2,0."),
+        ("γ_M",      "–",       "Materialfaktor for berg i kjeglemodellen. Standardverdi 2,0."),
+        ("γ_F,N",    "–",       "Lastfaktor for aksialkraftkomponenten N. Standardverdi 1,5."),
+        ("γ_F,V",    "–",       "Lastfaktor for skjærkraftkomponenten V. Standardverdi 1,5."),
+    ]),
+    ("Stål og tverrsnitt", [
+        ("f_yk",     "MPa",     "Karakteristisk flytegrense for stål (nedre grense)."),
+        ("f_uk",     "MPa",     "Karakteristisk bruddgrense for stål."),
+        ("A_s",      "mm²",     "Spenningsareal for metrisk grovgjenge etter ISO 262: A_s = π/4 · (d − 0,9382 · p)²."),
+        ("F_t,k",    "kN",      "Karakteristisk strekkraft oppgitt av leverandør for selvborende stag."),
+        ("F_v,k",    "kN",      "Karakteristisk skjærkraft oppgitt av leverandør for selvborende stag."),
+    ]),
+    ("Indre kapasitet (kap. 4.3)", [
+        ("R_itd",    "kN",      "Dimensjonerende strekkapasitet for staget: R_itd = A_s · f_yk / γ_s."),
+        ("R_Vd",     "kN",      "Dimensjonerende skjærkapasitet etter von Mises: R_Vd = A_s · f_yk / (√3 · γ_s)."),
+        ("U (von Mises)", "–",  "Utnyttelsesgrad etter von Mises-kriteriet: U = √(N² + 3V²) / R_itd. Kap. 4.3.2."),
+        ("U (elliptisk)", "–",  "Utnyttelsesgrad etter elliptisk interaksjonsformel: U = √((N/R_itd)² + (V/R_Vd)²)."),
+        ("β_crit",   "grader",  "Grensevinkel der utnyttelsen U = 1,0. Vinkler over denne gir brudd."),
+    ]),
+    ("Innfestingskapasitet (kap. 4.5)", [
+        ("f_ccube",  "MPa",     "Karakteristisk terningfasthet for injeksjonsmassen (28-dagers)."),
+        ("f_ck",     "MPa",     "Karakteristisk sylinderfasthet: f_ck = 0,8 · f_ccube."),
+        ("f_ctk",    "MPa",     "Karakteristisk strekkfasthet for injeksjonsmassen: f_ctk = 0,7 · 0,3 · f_ck^(2/3)."),
+        ("f_ctd",    "MPa",     "Dimensjonerende strekkfasthet: f_ctd = f_ctk / γ_c (γ_c = 1,5)."),
+        ("f_bd",     "MPa",     "Dimensjonerende heftfasthet stål–injeksjonsmasse: f_bd = 2,25 · f_ctd."),
+        ("R_tg",     "kN",      "Kapasitet for heftbrudd ved stål–injeksjonsmasse-grenseflaten: R_tg = π · d · l_b · f_bd."),
+        ("τ_k,berg", "MPa",     "Karakteristisk heftfasthet mellom injeksjonsmasse og berg (fra bergartstabellen)."),
+        ("τ_d",      "MPa",     "Dimensjonerende heftfasthet berg: τ_d = τ_k,berg / γ_τ."),
+        ("R_gg",     "kN",      "Kapasitet for heftbrudd ved injeksjonsmasse–berg-grenseflaten: R_gg = π · d_bh · l_b · τ_d."),
+        ("R_inn,min","kN",      "Styrende innfestingskapasitet = min(R_tg, R_gg). Skal være ≥ N_Ed."),
+    ]),
+    ("Ytre kapasitet — kjeglemodell (kap. 4.6)", [
+        ("τ_k,kjegle","kPa",   "Karakteristisk skjærstyrke langs kjegleflaten i berg. Avhenger av bergkvalitet (RQD)."),
+        ("ψ",        "grader",  "Halvåpningsvinkel for uttrekkskjeglen. Typisk 30–45° avhengig av bergkvalitet."),
+        ("λ_req",    "mm",      "Nødvendig forankringslengde fra kjeglemodellen: λ = √(γ_M · P_p · 1000 / (π · τ · tan ψ)). Skal være ≤ l_b."),
+    ]),
+    ("Kjedekontroll", [
+        ("Kjedekontroll", "–",  "Kontrollerer at kapasitetene øker fra stål til omstøpning til berg: R_itd ≤ R_tg ≤ R_gg. Dette sikrer at bruddet skjer i staget og ikke i heftsonene."),
+    ]),
+]
+
+
+def _param_glossary():
+    st.divider()
+    with st.expander("Parameterforklaring", expanded=False):
+        for group_name, params in _PARAM_GLOSSARY:
+            st.markdown(f"**{group_name}**")
+            rows = [
+                {"Symbol": sym, "Enhet": unit, "Forklaring": desc}
+                for sym, unit, desc in params
+            ]
+            st.dataframe(
+                pd.DataFrame(rows),
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Symbol":      st.column_config.TextColumn(width="small"),
+                    "Enhet":       st.column_config.TextColumn(width="small"),
+                    "Forklaring":  st.column_config.TextColumn(width="large"),
+                },
+            )
+            st.markdown("")
+
+
+# ---------------------------------------------------------------------------
 # Fane 1 – Stangstål
 # ---------------------------------------------------------------------------
 
@@ -419,6 +500,7 @@ def _render_bar_steel():
         _tab_sensitivity(inp, R_itd_v, R_Vd_v, "steel")
     with ttab:
         _tab_tables()
+    _param_glossary()
 
 
 # ---------------------------------------------------------------------------
@@ -461,6 +543,7 @@ def _render_supplier():
         _tab_sensitivity(inp, R_itd_v, R_Vd_v, "supplier")
     with ttab:
         _tab_tables()
+    _param_glossary()
 
 
 # ---------------------------------------------------------------------------
@@ -495,6 +578,7 @@ def _render_rock_bolt():
         _tab_sensitivity(inp, R_itd_v, R_Vd_v, "steel")
     with ttab:
         _tab_tables()
+    _param_glossary()
 
 
 # ---------------------------------------------------------------------------

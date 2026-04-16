@@ -1,6 +1,6 @@
 import streamlit as st
 
-from apps import barton_bandis, water_pressure_v2, block_weight
+from apps import barton_bandis, water_pressure_v2, block_weight, anchor_capacity
 
 st.set_page_config(
     page_title="Rock Mechanics Dashboard",
@@ -14,7 +14,8 @@ page = st.sidebar.radio(
     [
         "Barton–Bandis",
         "Vanntrykk + FS",
-        "Blokkvekt / Normalspenning"
+        "Blokkvekt / Normalspenning",
+        "Passive forankringer i berg",
     ],
     index=0
 )
@@ -25,5 +26,8 @@ if page == "Barton–Bandis":
 elif page == "Vanntrykk + FS":
     water_pressure_v2.render()
 
-else:
+elif page == "Blokkvekt / Normalspenning":
     block_weight.render()
+
+else:
+    anchor_capacity.render()

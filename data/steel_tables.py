@@ -35,16 +35,20 @@ STRESS_AREAS = pd.DataFrame([
 STRESS_AREA_BY_NAME = {row["Betegnelse"]: row for _, row in STRESS_AREAS.iterrows()}
 
 # ---------------------------------------------------------------------------
-# Tabell 10 – Heftfasthet berg (Håndbok V220)
+# Tabell 11.6.4.5-1 – Karakteristisk heftfasthet mørtel–berg
+# Kilde: Internrapport nr. 2374 [226]
+# Tyngdetetthet: midtpunkt av oppgitt område [kN/m³]
+# Trykkfasthet:  midtpunkt av oppgitt område [MPa]
+# Heftfasthet:   karakteristisk verdi τ_k [MPa]  (γ_τ = 1,25 anbefalt)
 # ---------------------------------------------------------------------------
 ROCK_BOND = pd.DataFrame([
-    {"Bergart": "Granitt",    "Tyngdetetthet": 26.5, "Trykkfasthet": 160, "Heftfasthet": 1.0},
-    {"Bergart": "Gabbro",     "Tyngdetetthet": 29.0, "Trykkfasthet": 200, "Heftfasthet": 1.2},
-    {"Bergart": "Gneis",      "Tyngdetetthet": 27.0, "Trykkfasthet": 140, "Heftfasthet": 0.9},
-    {"Bergart": "Kvartsitt",  "Tyngdetetthet": 26.5, "Trykkfasthet": 200, "Heftfasthet": 1.0},
-    {"Bergart": "Sandstein",  "Tyngdetetthet": 25.0, "Trykkfasthet":  60, "Heftfasthet": 0.5},
-    {"Bergart": "Kalkstein",  "Tyngdetetthet": 26.0, "Trykkfasthet":  80, "Heftfasthet": 0.6},
-    {"Bergart": "Leirskifer", "Tyngdetetthet": 27.0, "Trykkfasthet":  40, "Heftfasthet": 0.3},
+    {"Bergart": "Granitt",    "Tyngdetetthet_kNm3": "25–28", "Trykkfasthet_MPa": " 90–170", "tau_k_MPa": 2.0},
+    {"Bergart": "Gabbro",     "Tyngdetetthet_kNm3": "27–31", "Trykkfasthet_MPa": " 18–250", "tau_k_MPa": 2.5},
+    {"Bergart": "Gneis",      "Tyngdetetthet_kNm3": "25–28", "Trykkfasthet_MPa": " 90–130", "tau_k_MPa": 1.5},
+    {"Bergart": "Kvartsitt",  "Tyngdetetthet_kNm3": "21–25", "Trykkfasthet_MPa": "150–170", "tau_k_MPa": 2.5},
+    {"Bergart": "Sandstein",  "Tyngdetetthet_kNm3": "20–26", "Trykkfasthet_MPa": "100–140", "tau_k_MPa": 1.2},
+    {"Bergart": "Kalkstein",  "Tyngdetetthet_kNm3": "25–28", "Trykkfasthet_MPa": " 70–100", "tau_k_MPa": 2.0},
+    {"Bergart": "Leirskifer", "Tyngdetetthet_kNm3": "20–27", "Trykkfasthet_MPa": " 25–60",  "tau_k_MPa": 0.5},
 ])
 
 # ---------------------------------------------------------------------------

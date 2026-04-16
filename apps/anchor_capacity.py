@@ -48,7 +48,7 @@ def _sidebar_common(prefix: str) -> dict:
     """Partialfaktorer og last — felles for alle faner."""
     st.subheader("Partialfaktorer")
     gamma_s  = st.number_input("γ_s (stål)",       0.5, 3.0, 1.35, 0.01,  key=f"{prefix}_gs")
-    gamma_tau= st.number_input("γ_τ (heft)",        0.5, 5.0, 2.0,  0.1,   key=f"{prefix}_gtau")
+    gamma_tau= st.number_input("γ_τ (heft)",        0.5, 5.0, 1.25, 0.05,  key=f"{prefix}_gtau")
     gamma_M  = st.number_input("γ_M (berg)",        0.5, 5.0, 2.0,  0.1,   key=f"{prefix}_gM")
     gamma_FN = st.number_input("γ_F,N (aksialkraft)",0.5, 3.0, 1.5,  0.05,  key=f"{prefix}_gFN")
     gamma_FV = st.number_input("γ_F,V (skjærkraft)", 0.5, 3.0, 1.5,  0.05,  key=f"{prefix}_gFV")
@@ -102,7 +102,7 @@ def _sidebar_grouting(prefix: str) -> dict:
                               format_func=lambda i: rock_names[i],
                               key=f"{prefix}_rock")
     row_rock   = ROCK_BOND.iloc[rock_idx]
-    tau_k_berg = float(row_rock["Heftfasthet"])
+    tau_k_berg = float(row_rock["tau_k_MPa"])
     st.caption(f"τ_k,berg = {tau_k_berg} MPa")
 
     cone_names = CONE_PARAMS["Bergkvalitet"].tolist()
@@ -437,7 +437,7 @@ _PARAM_GLOSSARY = [
     ]),
     ("Partialfaktorer", [
         ("γ_s",      "–",       "Materialfaktor for stål. Standardverdi 1,35 etter NS-EN 1993."),
-        ("γ_τ",      "–",       "Materialfaktor for heftfasthet mellom injeksjonsmasse og berg. Standardverdi 2,0."),
+        ("γ_τ",      "–",       "Materialfaktor for heftfasthet mellom injeksjonsmasse og berg. Standardverdi 1,25 (Internrapport 2374)."),
         ("γ_M",      "–",       "Materialfaktor for berg i kjeglemodellen. Standardverdi 2,0."),
         ("γ_F,N",    "–",       "Lastfaktor for aksialkraftkomponenten N. Standardverdi 1,5."),
         ("γ_F,V",    "–",       "Lastfaktor for skjærkraftkomponenten V. Standardverdi 1,5."),

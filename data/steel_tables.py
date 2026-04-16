@@ -52,13 +52,23 @@ ROCK_BOND = pd.DataFrame([
 ])
 
 # ---------------------------------------------------------------------------
-# Tabell 13 – Kjeglemodell-parametere
+# Tabell 11.6.4.5-2 – Bruddvinkel og heftfasthet på bruddplan
+# Kilde: NGI-rapport 20210114-01-R, tabell 11.6.4.5-2
+# tau_k i kPa (karakteristisk), psi_max i grader
 # ---------------------------------------------------------------------------
 CONE_PARAMS = pd.DataFrame([
-    {"Bergkvalitet": "God (RQD 75–100)",      "tau_k_min": 600,  "tau_k_max": 1200, "psi_max": 45},
-    {"Bergkvalitet": "Middels (RQD 25–75)",   "tau_k_min": 300,  "tau_k_max": 600,  "psi_max": 40},
-    {"Bergkvalitet": "Dårlig (RQD 0–25)",     "tau_k_min": 100,  "tau_k_max": 300,  "psi_max": 35},
-    {"Bergkvalitet": "Meget dårlig (< RQD 0)","tau_k_min":  50,  "tau_k_max": 100,  "psi_max": 30},
+    {
+        "Bergkvalitet": "Meget godt berg — ett sprekkesett m/sporadiske sprekker; UCS > 50 MPa",
+        "tau_k_min": 100, "tau_k_max": 200, "psi_max": 45,
+    },
+    {
+        "Bergkvalitet": "To sprekkesett m/sporadiske sprekker; UCS 15–50 MPa",
+        "tau_k_min": 50,  "tau_k_max": 100, "psi_max": 40,
+    },
+    {
+        "Bergkvalitet": "Tre sprekkesett m/sporadiske sprekker (<20 pr. m²); UCS < 15 MPa",
+        "tau_k_min": 50,  "tau_k_max": 50,  "psi_max": 30,
+    },
 ])
 
 # ---------------------------------------------------------------------------

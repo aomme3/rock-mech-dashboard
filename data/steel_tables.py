@@ -1,0 +1,70 @@
+"""
+Stål- og produkttabeller for passive forankringer i berg.
+Kilde: NGI-rapport 20210114-01-R (Sikringshåndboken, NVE)
+"""
+
+import pandas as pd
+
+# ---------------------------------------------------------------------------
+# Tabell 4 – Stålkvaliteter
+# ---------------------------------------------------------------------------
+STEEL_GRADES = pd.DataFrame([
+    {"Ståltype": "B500NC",      "f_yk": 500,  "f_uk": 550,  "Merknad": "Armering, duktil (NC)"},
+    {"Ståltype": "St555/700",   "f_yk": 555,  "f_uk": 700,  "Merknad": "Bergsikringsbolter (SB)"},
+    {"Ståltype": "St670/800",   "f_yk": 670,  "f_uk": 800,  "Merknad": "Bergsikringsbolter, høyfast"},
+    {"Ståltype": "St835/1030",  "f_yk": 835,  "f_uk": 1030, "Merknad": "Selvborende stag, høyfast"},
+    {"Ståltype": "S355",        "f_yk": 355,  "f_uk": 490,  "Merknad": "Konstruksjonsstål (EN 10025)"},
+    {"Ståltype": "S460NH",      "f_yk": 460,  "f_uk": 550,  "Merknad": "Konstruksjonsstål, hulprofil"},
+])
+
+# ---------------------------------------------------------------------------
+# Tabell 9 – Spenningsareal for metriske grovgjenger (ISO 262)
+# ---------------------------------------------------------------------------
+STRESS_AREAS = pd.DataFrame([
+    {"Betegnelse": "M20", "d_major": 20.0, "Stigning": 2.5,  "A_s": 245},
+    {"Betegnelse": "M22", "d_major": 22.0, "Stigning": 2.5,  "A_s": 303},
+    {"Betegnelse": "M24", "d_major": 24.0, "Stigning": 3.0,  "A_s": 353},
+    {"Betegnelse": "M27", "d_major": 27.0, "Stigning": 3.0,  "A_s": 459},
+    {"Betegnelse": "M30", "d_major": 30.0, "Stigning": 3.5,  "A_s": 561},
+    {"Betegnelse": "M33", "d_major": 33.0, "Stigning": 3.5,  "A_s": 694},
+    {"Betegnelse": "M36", "d_major": 36.0, "Stigning": 4.0,  "A_s": 817},
+    {"Betegnelse": "M39", "d_major": 39.0, "Stigning": 4.0,  "A_s": 976},
+])
+
+# For lookup by nom diameter (closest match)
+STRESS_AREA_BY_NAME = {row["Betegnelse"]: row for _, row in STRESS_AREAS.iterrows()}
+
+# ---------------------------------------------------------------------------
+# Tabell 10 – Heftfasthet berg (Håndbok V220)
+# ---------------------------------------------------------------------------
+ROCK_BOND = pd.DataFrame([
+    {"Bergart": "Granitt",    "Tyngdetetthet": 26.5, "Trykkfasthet": 160, "Heftfasthet": 1.0},
+    {"Bergart": "Gabbro",     "Tyngdetetthet": 29.0, "Trykkfasthet": 200, "Heftfasthet": 1.2},
+    {"Bergart": "Gneis",      "Tyngdetetthet": 27.0, "Trykkfasthet": 140, "Heftfasthet": 0.9},
+    {"Bergart": "Kvartsitt",  "Tyngdetetthet": 26.5, "Trykkfasthet": 200, "Heftfasthet": 1.0},
+    {"Bergart": "Sandstein",  "Tyngdetetthet": 25.0, "Trykkfasthet":  60, "Heftfasthet": 0.5},
+    {"Bergart": "Kalkstein",  "Tyngdetetthet": 26.0, "Trykkfasthet":  80, "Heftfasthet": 0.6},
+    {"Bergart": "Leirskifer", "Tyngdetetthet": 27.0, "Trykkfasthet":  40, "Heftfasthet": 0.3},
+])
+
+# ---------------------------------------------------------------------------
+# Tabell 13 – Kjeglemodell-parametere
+# ---------------------------------------------------------------------------
+CONE_PARAMS = pd.DataFrame([
+    {"Bergkvalitet": "God (RQD 75–100)",      "tau_k_min": 600,  "tau_k_max": 1200, "psi_max": 45},
+    {"Bergkvalitet": "Middels (RQD 25–75)",   "tau_k_min": 300,  "tau_k_max": 600,  "psi_max": 40},
+    {"Bergkvalitet": "Dårlig (RQD 0–25)",     "tau_k_min": 100,  "tau_k_max": 300,  "psi_max": 35},
+    {"Bergkvalitet": "Meget dårlig (< RQD 0)","tau_k_min":  50,  "tau_k_max": 100,  "psi_max": 30},
+])
+
+# ---------------------------------------------------------------------------
+# Leverandørdata – selvborende stag (eksempeldata T-Pretec)
+# ---------------------------------------------------------------------------
+SELF_DRILLING_ANCHORS = pd.DataFrame([
+    {"Produkt": "T40/16 Pretec",  "Ytre_diam": 40,  "Indre_diam": 16, "F_tk": 525,  "F_vk": 262,  "Vekt": 7.3},
+    {"Produkt": "T52/26 Pretec",  "Ytre_diam": 52,  "Indre_diam": 26, "F_tk": 800,  "F_vk": 400,  "Vekt": 9.2},
+    {"Produkt": "T76/46 Pretec",  "Ytre_diam": 76,  "Indre_diam": 46, "F_tk": 1200, "F_vk": 600,  "Vekt": 14.5},
+    {"Produkt": "R25 IBO",        "Ytre_diam": 25,  "Indre_diam": 9,  "F_tk": 250,  "F_vk": 125,  "Vekt": 3.0},
+    {"Produkt": "R32 IBO",        "Ytre_diam": 32,  "Indre_diam": 11, "F_tk": 400,  "F_vk": 200,  "Vekt": 4.4},
+    {"Produkt": "R51 IBO",        "Ytre_diam": 51,  "Indre_diam": 20, "F_tk": 800,  "F_vk": 400,  "Vekt": 8.6},
+])

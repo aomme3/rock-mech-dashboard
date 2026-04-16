@@ -48,7 +48,7 @@ def _sidebar_common(prefix: str) -> dict:
     """Partialfaktorer og last — felles for alle faner."""
     st.subheader("Partialfaktorer")
     gamma_s  = st.number_input("γ_s (stål)",       0.5, 3.0, 1.35, 0.01,  key=f"{prefix}_gs")
-    gamma_tau= st.number_input("γ_τ (heft)",        0.5, 5.0, 2.0,  0.1,   key=f"{prefix}_gtau")
+    gamma_tau= st.number_input("γ_τ (heft)",        0.5, 5.0, 1.25, 0.05,  key=f"{prefix}_gtau")
     gamma_M  = st.number_input("γ_M (berg)",        0.5, 5.0, 2.0,  0.1,   key=f"{prefix}_gM")
     gamma_FN = st.number_input("γ_F,N (aksialkraft)",0.5, 3.0, 1.5,  0.05,  key=f"{prefix}_gFN")
     gamma_FV = st.number_input("γ_F,V (skjærkraft)", 0.5, 3.0, 1.5,  0.05,  key=f"{prefix}_gFV")
@@ -97,22 +97,61 @@ def _sidebar_grouting(prefix: str) -> dict:
     l_b     = st.number_input("Innfestingslengde l_b [mm]",   100.0, 5000.0, 1000.0, 50.0, key=f"{prefix}_lb")
 
     st.subheader("Bergparametere")
+    st.caption("Velg fra tabell — verdier kan overstyres i feltene under.")
+
+    # -- Heftfasthet mørtel–berg --
     rock_names = ROCK_BOND["Bergart"].tolist()
-    rock_idx   = st.selectbox("Bergart", range(len(rock_names)),
+    rock_idx   = st.selectbox("Bergart (heftfasthet)", range(len(rock_names)),
                               format_func=lambda i: rock_names[i],
                               key=f"{prefix}_rock")
-    row_rock   = ROCK_BOND.iloc[rock_idx]
-    tau_k_berg = float(row_rock["Heftfasthet"])
-    st.caption(f"τ_k,berg = {tau_k_berg} MPa")
+    tau_k_berg_tbl = float(ROCK_BOND.iloc[rock_idx]["tau_k_MPa"])
+    tau_k_berg = st.number_input(
+        "τ_k,berg [MPa]  ← override",
+        min_value=0.01, max_value=10.0,
+        value=tau_k_berg_tbl, step=0.1,
+        key=f"{prefix}_rock_override_{rock_idx}",
+        help="Karakteristisk heftfasthet mørtel–berg (Internrapport 2374). "
+             "Endres automatisk ved nytt bergartsvalg, men kan overstyres manuelt.",
+    )
 
+    st.divider()
+
+    # -- Kjeglemodell --
     cone_names = CONE_PARAMS["Bergkvalitet"].tolist()
-    cone_idx   = st.selectbox("Bergkvalitet (kjegle)", range(len(cone_names)),
+    cone_idx   = st.selectbox("Bergkvalitet (kjeglemodell)", range(len(cone_names)),
                               format_func=lambda i: cone_names[i],
                               key=f"{prefix}_cone")
-    row_cone   = CONE_PARAMS.iloc[cone_idx]
-    tau_k_cone = float(row_cone["tau_k_min"])
-    psi_deg    = float(row_cone["psi_max"])
-    st.caption(f"τ_k,kjegle = {tau_k_cone} kPa  |  ψ = {psi_deg}°")
+    row_cone      = CONE_PARAMS.iloc[cone_idx]
+    tau_k_min_tbl = float(row_cone["tau_k_min"])
+    tau_k_max_tbl = float(row_cone["tau_k_max"])
+    psi_max_tbl   = float(row_cone["psi_max"])
+
+    st.caption(
+        f"Tabellanbefalte verdier:  "
+        f"τ_k = {tau_k_min_tbl}–{tau_k_max_tbl} kPa  |  ψ_maks = {psi_max_tbl}°"
+    )
+    c1, c2 = st.columns(2)
+    tau_k_cone = c1.number_input(
+        "τ_k,kjegle [kPa]  ← override",
+        min_value=1.0, max_value=2000.0,
+        value=tau_k_min_tbl, step=10.0,
+        key=f"{prefix}_cone_tau_{cone_idx}",
+        help="Karakteristisk skjærstyrke langs kjegleflaten. "
+             "Standard: konservativ minimumsverdi fra tabell.",
+    )
+    psi_deg = c2.number_input(
+        "ψ [grader]  ← override",
+        min_value=1.0, max_value=89.0,
+        value=psi_max_tbl, step=1.0,
+        key=f"{prefix}_cone_psi_{cone_idx}",
+        help="Halvåpningsvinkel for uttrekkskjeglen. "
+             "Skal ikke overstige tabellanbefalte ψ_maks.",
+    )
+    if psi_deg > psi_max_tbl:
+        st.warning(
+            f"ψ = {psi_deg:.0f}° overskrider tabellanbefalingen ψ_maks = {psi_max_tbl:.0f}° "
+            f"for valgt bergkvalitet."
+        )
 
     return dict(f_ccube=f_ccube, d_bh=d_bh, l_b=l_b,
                 tau_k_berg=tau_k_berg, tau_k_cone=tau_k_cone, psi_deg=psi_deg)
@@ -437,7 +476,7 @@ _PARAM_GLOSSARY = [
     ]),
     ("Partialfaktorer", [
         ("γ_s",      "–",       "Materialfaktor for stål. Standardverdi 1,35 etter NS-EN 1993."),
-        ("γ_τ",      "–",       "Materialfaktor for heftfasthet mellom injeksjonsmasse og berg. Standardverdi 2,0."),
+        ("γ_τ",      "–",       "Materialfaktor for heftfasthet mellom injeksjonsmasse og berg. Standardverdi 1,25 (Internrapport 2374)."),
         ("γ_M",      "–",       "Materialfaktor for berg i kjeglemodellen. Standardverdi 2,0."),
         ("γ_F,N",    "–",       "Lastfaktor for aksialkraftkomponenten N. Standardverdi 1,5."),
         ("γ_F,V",    "–",       "Lastfaktor for skjærkraftkomponenten V. Standardverdi 1,5."),

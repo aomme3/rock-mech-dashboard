@@ -35,26 +35,40 @@ STRESS_AREAS = pd.DataFrame([
 STRESS_AREA_BY_NAME = {row["Betegnelse"]: row for _, row in STRESS_AREAS.iterrows()}
 
 # ---------------------------------------------------------------------------
-# Tabell 10 – Heftfasthet berg (Håndbok V220)
+# Tabell 11.6.4.5-1 – Karakteristisk heftfasthet mørtel–berg
+# Kilde: Internrapport nr. 2374 [226]
+# Tyngdetetthet: midtpunkt av oppgitt område [kN/m³]
+# Trykkfasthet:  midtpunkt av oppgitt område [MPa]
+# Heftfasthet:   karakteristisk verdi τ_k [MPa]  (γ_τ = 1,25 anbefalt)
 # ---------------------------------------------------------------------------
 ROCK_BOND = pd.DataFrame([
-    {"Bergart": "Granitt",    "Tyngdetetthet": 26.5, "Trykkfasthet": 160, "Heftfasthet": 1.0},
-    {"Bergart": "Gabbro",     "Tyngdetetthet": 29.0, "Trykkfasthet": 200, "Heftfasthet": 1.2},
-    {"Bergart": "Gneis",      "Tyngdetetthet": 27.0, "Trykkfasthet": 140, "Heftfasthet": 0.9},
-    {"Bergart": "Kvartsitt",  "Tyngdetetthet": 26.5, "Trykkfasthet": 200, "Heftfasthet": 1.0},
-    {"Bergart": "Sandstein",  "Tyngdetetthet": 25.0, "Trykkfasthet":  60, "Heftfasthet": 0.5},
-    {"Bergart": "Kalkstein",  "Tyngdetetthet": 26.0, "Trykkfasthet":  80, "Heftfasthet": 0.6},
-    {"Bergart": "Leirskifer", "Tyngdetetthet": 27.0, "Trykkfasthet":  40, "Heftfasthet": 0.3},
+    {"Bergart": "Granitt",    "Tyngdetetthet_kNm3": "25–28", "Trykkfasthet_MPa": " 90–170", "tau_k_MPa": 2.0},
+    {"Bergart": "Gabbro",     "Tyngdetetthet_kNm3": "27–31", "Trykkfasthet_MPa": " 18–250", "tau_k_MPa": 2.5},
+    {"Bergart": "Gneis",      "Tyngdetetthet_kNm3": "25–28", "Trykkfasthet_MPa": " 90–130", "tau_k_MPa": 1.5},
+    {"Bergart": "Kvartsitt",  "Tyngdetetthet_kNm3": "21–25", "Trykkfasthet_MPa": "150–170", "tau_k_MPa": 2.5},
+    {"Bergart": "Sandstein",  "Tyngdetetthet_kNm3": "20–26", "Trykkfasthet_MPa": "100–140", "tau_k_MPa": 1.2},
+    {"Bergart": "Kalkstein",  "Tyngdetetthet_kNm3": "25–28", "Trykkfasthet_MPa": " 70–100", "tau_k_MPa": 2.0},
+    {"Bergart": "Leirskifer", "Tyngdetetthet_kNm3": "20–27", "Trykkfasthet_MPa": " 25–60",  "tau_k_MPa": 0.5},
 ])
 
 # ---------------------------------------------------------------------------
-# Tabell 13 – Kjeglemodell-parametere
+# Tabell 11.6.4.5-2 – Bruddvinkel og heftfasthet på bruddplan
+# Kilde: NGI-rapport 20210114-01-R, tabell 11.6.4.5-2
+# tau_k i kPa (karakteristisk), psi_max i grader
 # ---------------------------------------------------------------------------
 CONE_PARAMS = pd.DataFrame([
-    {"Bergkvalitet": "God (RQD 75–100)",      "tau_k_min": 600,  "tau_k_max": 1200, "psi_max": 45},
-    {"Bergkvalitet": "Middels (RQD 25–75)",   "tau_k_min": 300,  "tau_k_max": 600,  "psi_max": 40},
-    {"Bergkvalitet": "Dårlig (RQD 0–25)",     "tau_k_min": 100,  "tau_k_max": 300,  "psi_max": 35},
-    {"Bergkvalitet": "Meget dårlig (< RQD 0)","tau_k_min":  50,  "tau_k_max": 100,  "psi_max": 30},
+    {
+        "Bergkvalitet": "Meget godt berg — ett sprekkesett m/sporadiske sprekker; UCS > 50 MPa",
+        "tau_k_min": 100, "tau_k_max": 200, "psi_max": 45,
+    },
+    {
+        "Bergkvalitet": "To sprekkesett m/sporadiske sprekker; UCS 15–50 MPa",
+        "tau_k_min": 50,  "tau_k_max": 100, "psi_max": 40,
+    },
+    {
+        "Bergkvalitet": "Tre sprekkesett m/sporadiske sprekker (<20 pr. m²); UCS < 15 MPa",
+        "tau_k_min": 50,  "tau_k_max": 50,  "psi_max": 30,
+    },
 ])
 
 # ---------------------------------------------------------------------------

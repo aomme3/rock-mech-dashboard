@@ -9,6 +9,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from apps.pdf_report import generate_pdf
 from apps.anchor_calculations import (
     stress_area, r_itd, r_vd, r_itd_supplier, r_vd_supplier,
     decompose, apply_load_factors,
@@ -373,6 +374,35 @@ def _tab_sensitivity(inp: dict, R_itd_val: float, R_Vd_val: float, mode: str):
 # Tab: Tabeller
 # ---------------------------------------------------------------------------
 
+def _pdf_download_button(inp: dict, R_itd_v: float, R_Vd_v: float, key: str):
+    """Ekspandérbar prosjektinfo + nedlastningsknapp for PDF-rapport."""
+    st.divider()
+    with st.expander("Last ned beregningsnotat (PDF)", expanded=False):
+        c1, c2 = st.columns(2)
+        prosjekt  = c1.text_input("Prosjektnavn",     key=f"{key}_proj")
+        utfort_av = c2.text_input("Utført av",        key=f"{key}_by")
+        kontroll  = c1.text_input("Kontrollert av",   key=f"{key}_ctrl")
+        revisjon  = c2.text_input("Revisjon", value="0", key=f"{key}_rev")
+        if st.button("Generer PDF", key=f"{key}_gen"):
+            project_info = dict(prosjekt=prosjekt, utfort_av=utfort_av,
+                                kontrollert_av=kontroll, revisjon=revisjon)
+            try:
+                pdf_bytes = generate_pdf(
+                    inp=inp,
+                    results={"R_itd": R_itd_v, "R_Vd": R_Vd_v},
+                    project_info=project_info,
+                )
+                st.download_button(
+                    label="Last ned PDF",
+                    data=pdf_bytes,
+                    file_name="beregningsnotat_forankring.pdf",
+                    mime="application/pdf",
+                    key=f"{key}_dl",
+                )
+            except Exception as e:
+                st.error(f"PDF-feil: {e}")
+
+
 def _tab_tables():
     t1, t2, t3, t4, t5 = st.tabs([
         "Stålkvaliteter", "Spenningsareal", "Heftfasthet berg",
@@ -490,6 +520,8 @@ def _render_bar_steel():
     N_Ed, V_Ed = apply_load_factors(N_k, V_k, inp["gamma_FN"], inp["gamma_FV"])
     R_itd_v = r_itd(inp["A_s"], inp["f_yk"], inp["gamma_s"])
     R_Vd_v  = r_vd(inp["A_s"], inp["f_yk"], inp["gamma_s"])
+    inp["mode"] = "steel"
+    inp["type_label"] = "Stangstål"
 
     tc, ts, tsen, ttab = st.tabs(["Kapasitet", "Skisse", "Sensitivitet", "Tabeller"])
     with tc:
@@ -500,6 +532,7 @@ def _render_bar_steel():
         _tab_sensitivity(inp, R_itd_v, R_Vd_v, "steel")
     with ttab:
         _tab_tables()
+    _pdf_download_button(inp, R_itd_v, R_Vd_v, key="bar")
     _param_glossary()
 
 
@@ -529,7 +562,8 @@ def _render_supplier():
         g = _sidebar_grouting("sup")
         g["d"] = d_def
 
-    inp = {**p, **g, "F_tk": F_tk, "F_vk": F_vk, "d": d_def}
+    inp = {**p, **g, "F_tk": F_tk, "F_vk": F_vk, "d": d_def,
+           "mode": "supplier", "type_label": "Selvborende stag (leverandør)"}
 
     R_itd_v = r_itd_supplier(F_tk, inp["gamma_s"])
     R_Vd_v  = r_vd_supplier(F_vk, inp["gamma_s"])
@@ -543,6 +577,7 @@ def _render_supplier():
         _tab_sensitivity(inp, R_itd_v, R_Vd_v, "supplier")
     with ttab:
         _tab_tables()
+    _pdf_download_button(inp, R_itd_v, R_Vd_v, key="sup")
     _param_glossary()
 
 
@@ -562,7 +597,7 @@ def _render_rock_bolt():
         st.subheader("Innfesting og berg")
         g = _sidebar_grouting("rb")
 
-    inp = {**p, **s, **g}
+    inp = {**p, **s, **g, "mode": "steel", "type_label": "Innstøpt bergbolt"}
 
     N_k, V_k = decompose(inp["F_k"], inp["beta"])
     N_Ed, V_Ed = apply_load_factors(N_k, V_k, inp["gamma_FN"], inp["gamma_FV"])
@@ -578,6 +613,7 @@ def _render_rock_bolt():
         _tab_sensitivity(inp, R_itd_v, R_Vd_v, "steel")
     with ttab:
         _tab_tables()
+    _pdf_download_button(inp, R_itd_v, R_Vd_v, key="rb")
     _param_glossary()
 
 
